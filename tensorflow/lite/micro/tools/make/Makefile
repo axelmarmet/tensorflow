@@ -113,7 +113,7 @@ ifneq ($(CO_PROCESSOR),)
   ADDITIONAL_DEFINES += -D$(shell echo $(CO_PROCESSOR) | tr [a-z] [A-Z])
 endif
 
-OPTIMIZATION_LEVEL := -O3
+OPTIMIZATION_LEVEL := -O0
 
 CC_WARNINGS := \
   -Wsign-compare \
@@ -127,7 +127,9 @@ CC_WARNINGS := \
   -Wall \
   -Wextra \
   -Wstrict-aliasing \
-  -Wno-unused-parameter
+  -Wno-unused-parameter \
+  -Wno-strict-overflow
+# Wno-strict-overflow added for NIOS 
 
 COMMON_FLAGS := \
   -Werror \

@@ -59,7 +59,9 @@ function patch_to_avoid_strtod() {
 
   echo "#if 1" >> ${temp_flexbuffers_path}
   echo "#pragma GCC diagnostic push" >> ${temp_flexbuffers_path}
+  echo "#if __GNUC__ > 5 || (__GNUC__ == 5 && __GNUC_MINOR__ > 3)"  >> ${temp_flexbuffers_path}
   echo "#pragma GCC diagnostic ignored \"-Wnull-dereference\"" >> ${temp_flexbuffers_path}
+  echo "#endif"  >> ${temp_flexbuffers_path}
   echo "          // TODO(b/173239141): Patched via micro/tools/make/flexbuffers_download.sh" >> ${temp_flexbuffers_path}
   echo "          // Introduce a segfault for an unsupported code path for TFLM." >> ${temp_flexbuffers_path}
   echo "          return *(static_cast<double*>(nullptr));" >> ${temp_flexbuffers_path}
