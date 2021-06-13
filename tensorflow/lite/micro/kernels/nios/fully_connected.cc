@@ -161,6 +161,10 @@ inline void FullyConnectedHard(
   TFLITE_DCHECK_LE(output_depth, filter_shape.Dims(filter_dim_count - 2));
   const int accum_depth = filter_shape.Dims(filter_dim_count - 1);
 
+  assert(batches == 1);
+  assert(output_depth < 1024);
+  assert(accum_depth < 1024);
+
   // todo check if fits in accelerator
   write_config(CPU_0_SUBSYSTEM_QML_ACCELERATOR_0_BASE, accum_depth, output_depth, 0);
   write_weight_address(CPU_0_SUBSYSTEM_QML_ACCELERATOR_0_BASE, filter_data);
