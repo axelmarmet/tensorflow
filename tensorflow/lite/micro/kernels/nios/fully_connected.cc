@@ -25,11 +25,13 @@ limitations under the License.
 #include "tensorflow/lite/kernels/kernel_util.h"
 #include "tensorflow/lite/micro/kernels/kernel_util.h"
 
-#include "system.h"
-#include "io.h"
-#include "altera_avalon_pio_regs.h"
-#include "altera_avalon_performance_counter.h"
-#include "QML_accelerator.h"
+extern "C" {
+  #include "system.h"
+  #include "io.h"
+  #include "altera_avalon_pio_regs.h"
+  #include "altera_avalon_performance_counter.h"
+  #include "QML_accelerator.h"
+}
 
 namespace tflite {
 namespace {
