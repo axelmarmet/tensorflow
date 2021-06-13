@@ -160,6 +160,8 @@ inline int32_t MultiplyByQuantizedMultiplier(int32_t x,
   using gemmlowp::SaturatingRoundingDoublingHighMul;
   int left_shift = shift > 0 ? shift : 0;
   int right_shift = shift > 0 ? 0 : -shift;
+  // printf("1 : %ld\n", SaturatingRoundingDoublingHighMul(
+  //                                x * (1 << left_shift), quantized_multiplier));
   return RoundingDivideByPOT(SaturatingRoundingDoublingHighMul(
                                  x * (1 << left_shift), quantized_multiplier),
                              right_shift);

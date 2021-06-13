@@ -30,7 +30,9 @@ extern "C" {
   #include "io.h"
   #include "altera_avalon_pio_regs.h"
   #include "altera_avalon_performance_counter.h"
+  #include <sys/alt_cache.h>
   #include "QML_accelerator.h"
+  #include "stdio.h"
 }
 
 namespace tflite {
@@ -62,7 +64,10 @@ inline void FullyConnectedSoft(
   TFLITE_DCHECK_LE(output_depth, filter_shape.Dims(filter_dim_count - 2));
   const int accum_depth = filter_shape.Dims(filter_dim_count - 1);
 
-  PERF_BEGIN(CPU_0_SUBSYSTEM_PERFORMANCE_COUNTER_INST_BASE, LOOP_SECTION);
+  if (accum_depth == 1 && output_depth == 16) {
+    PERF_BEGIN(CPU_0_SUBSYSTEM_PERFORMANCE_COUNTER_INST_BASE, LOOP_SECTION);
+  }
+  // printf("int32_t interm[] = {\n\t");
 
   for (int b = 0; b < batches; ++b) {
     for (int out_c = 0; out_c < output_depth; ++out_c) {
@@ -75,6 +80,7 @@ inline void FullyConnectedSoft(
       if (bias_data) {
         acc += bias_data[out_c];
       }
+      // printf("0 : %ld, ", acc);
       acc = MultiplyByQuantizedMultiplier(acc, output_multiplier, output_shift);
       acc += output_offset;
       acc = std::max(acc, output_activation_min);
@@ -82,62 +88,48 @@ inline void FullyConnectedSoft(
       output_data[out_c + output_depth * b] = static_cast<int8_t>(acc);
     }
   }
+  // printf("};\n");
 
-  printf("int32_t output_depth = %d\n", output_depth);
-  printf("int32_t accum_depth = %d\n", accum_depth);
-  printf("int32_t input_offset = %ld\n", input_offset);
-  printf("int32_t filter_offset = %ld\n", filter_offset);
-  printf("int32_t output_offset = %ld\n", output_offset);
-  printf("int32_t output_multiplier = %ld\n", output_multiplier);
-  printf("int32_t output_shift = %d\n", output_shift);
-  printf("int32_t output_activation_min = %ld\n", output_activation_min);
-  printf("int32_t output_activation_max = %ld\n", output_activation_max);
 
-  printf("int8_t inputs[] = {\n\t");
-  for (int out_c = 0; out_c < output_depth; ++out_c) {
-    for (int d = 0; d < accum_depth; ++d) {
-      printf("%d, ", input_data[d]);
-      if((d) % 10 == 9){
-        printf("\n\t");
-      }
-    }
+  // printf("int32_t output_depth = %d\n", output_depth);
+  // printf("int32_t accum_depth = %d\n", accum_depth);
+  // printf("int32_t input_offset = %ld\n", input_offset);
+  // printf("int32_t filter_offset = %ld\n", filter_offset);
+  // printf("int32_t output_offset = %ld\n", output_offset);
+  // printf("int32_t output_multiplier = %ld\n", output_multiplier);
+  // printf("int32_t output_shift = %d\n", output_shift);
+  // printf("int32_t output_activation_min = %ld\n", output_activation_min);
+  // printf("int32_t output_activation_max = %ld\n", output_activation_max);
+
+  // printf("constant input_memory: byte_memory(%d downto 0) := (\n", accum_depth - 1);
+  // for (int d = 0; d < accum_depth; ++d) {
+  //   printf("\t %d => std_logic_vector(to_signed(%d, 8)),\n", d, input_data[d]);
+  // }
+  // printf(");\n");
+
+  // printf("constant weight_memory: byte_memory(%d downto 0) := (\n", output_depth * accum_depth - 1);
+  // for (int out_c = 0; out_c < output_depth; ++out_c) {
+  //   for (int d = 0; d < accum_depth; ++d) {
+  //     printf("\t %d => std_logic_vector(to_signed(%d, 8)),\n", out_c * accum_depth + d, filter_data[out_c * accum_depth + d]);
+  //   }
+  // }
+  // printf(");\n");
+
+  // printf("constant formal_bias_memory: word_memory(%d downto 0) := (\n", output_depth - 1);
+  // for (int out_c = 0; out_c < output_depth; ++out_c) {
+  //   printf("\t %d => std_logic_vector(to_signed(%ld, 32)),\n", out_c, bias_data[out_c]);
+  // }
+  // printf(");\n");
+
+  // printf("constant expected_output: byte_memory(%d downto 0) := (\n", output_depth - 1);
+  // for (int out_c = 0; out_c < output_depth; ++out_c) {
+  //   printf("\t %d => std_logic_vector(to_signed(%d, 8)),\n", out_c, output_data[out_c]);
+  // }
+  // printf(");\n");
+
+  if (accum_depth == 1 && output_depth == 16) {
+    PERF_END(CPU_0_SUBSYSTEM_PERFORMANCE_COUNTER_INST_BASE, LOOP_SECTION);
   }
-  
-  printf("};\n");
-
-  printf("int8_t weights[] = {\n\t");
-  for (int out_c = 0; out_c < output_depth; ++out_c) {
-    for (int d = 0; d < accum_depth; ++d) {
-      printf("%d, ", filter_data[out_c * accum_depth + d]);
-      if((out_c * accum_depth + d) % 10 == 9){
-        printf("\n\t");
-      }
-    }
-  }
-  printf("};\n");
-
-  printf("int32_t biases[] = {\n\t");
-  for (int out_c = 0; out_c < output_depth; ++out_c) {
-        printf("%ld, ", bias_data[out_c]);
-        if(out_c % 10 == 9){
-          printf("\n\t");
-        }
-  }
-  printf("};\n");
-
-  printf("int32_t outputs[] = {\n\t");
-  for (int out_c = 0; out_c < output_depth; ++out_c) {
-        printf("%d, ", output_data[out_c]);
-        if(out_c % 10 == 9){
-          printf("\n\t");
-        }
-  }
-  printf("};\n");
-
-  
-
-  PERF_END(CPU_0_SUBSYSTEM_PERFORMANCE_COUNTER_INST_BASE, LOOP_SECTION);
-
 }
 
 inline void FullyConnectedHard(
@@ -167,7 +159,22 @@ inline void FullyConnectedHard(
   assert(output_depth < 1024);
   assert(accum_depth < 1024);
 
-  // todo check if fits in accelerator
+  if (accum_depth == 1 && output_depth == 16) {
+    PERF_BEGIN(CPU_0_SUBSYSTEM_PERFORMANCE_COUNTER_INST_BASE, LOOP_SECTION);
+  }
+  
+  // printf("int32_t output_depth = %d\n", output_depth);
+  // printf("int32_t accum_depth = %d\n", accum_depth);
+  // printf("int32_t input_offset = %ld\n", input_offset);
+  // printf("int32_t filter_offset = %ld\n", filter_offset);
+  // printf("int32_t output_offset = %ld\n", output_offset);
+  // printf("int32_t output_multiplier = %ld\n", output_multiplier);
+  // printf("int32_t output_shift = %d\n", output_shift);
+  // printf("int32_t output_activation_min = %ld\n", output_activation_min);
+  // printf("int32_t output_activation_max = %ld\n", output_activation_max);
+
+  alt_dcache_flush_all();
+
   write_config(CPU_0_SUBSYSTEM_QML_ACCELERATOR_0_BASE, accum_depth, output_depth, 0);
   write_weight_address(CPU_0_SUBSYSTEM_QML_ACCELERATOR_0_BASE, filter_data);
   write_bias_address(CPU_0_SUBSYSTEM_QML_ACCELERATOR_0_BASE, bias_data);
@@ -177,7 +184,39 @@ inline void FullyConnectedHard(
   write_mo(CPU_0_SUBSYSTEM_QML_ACCELERATOR_0_BASE, output_multiplier);
   write_m_exposant(CPU_0_SUBSYSTEM_QML_ACCELERATOR_0_BASE, output_shift);
 
-  while(!is_accelerator_done(CPU_0_SUBSYSTEM_QML_ACCELERATOR_0_BASE)) {}
+  start_accelerator(CPU_0_SUBSYSTEM_QML_ACCELERATOR_0_BASE);
+
+  while(!is_accelerator_idle(CPU_0_SUBSYSTEM_QML_ACCELERATOR_0_BASE)) {}
+
+  // printf("constant input_memory: byte_memory(%d downto 0) := (\n", accum_depth - 1);
+  // for (int d = 0; d < accum_depth; ++d) {
+  //   printf("\t %d => std_logic_vector(to_signed(%d, 8)),\n", d, input_data[d]);
+  // }
+  // printf(");\n");
+
+  // printf("constant weight_memory: byte_memory(%d downto 0) := (\n", output_depth * accum_depth - 1);
+  // for (int out_c = 0; out_c < output_depth; ++out_c) {
+  //   for (int d = 0; d < accum_depth; ++d) {
+  //     printf("\t %d => std_logic_vector(to_signed(%d, 8)),\n", out_c * accum_depth + d, filter_data[out_c * accum_depth + d]);
+  //   }
+  // }
+  // printf(");\n");
+
+  // printf("constant formal_bias_memory: word_memory(%d downto 0) := (\n", output_depth - 1);
+  // for (int out_c = 0; out_c < output_depth; ++out_c) {
+  //   printf("\t %d => std_logic_vector(to_signed(%ld, 32)),\n", out_c, bias_data[out_c]);
+  // }
+  // printf(");\n");
+
+  // printf("constant expected_output: byte_memory(%d downto 0) := (\n", output_depth - 1);
+  // for (int out_c = 0; out_c < output_depth; ++out_c) {
+  //   printf("\t %d => std_logic_vector(to_signed(%d, 8)),\n", out_c, output_data[out_c]);
+  // }
+  // printf(");\n");
+
+  if (accum_depth == 1 && output_depth == 16) {
+    PERF_END(CPU_0_SUBSYSTEM_PERFORMANCE_COUNTER_INST_BASE, LOOP_SECTION);
+  }
 }
 
 void* Init(TfLiteContext* context, const char* buffer, size_t length) {
