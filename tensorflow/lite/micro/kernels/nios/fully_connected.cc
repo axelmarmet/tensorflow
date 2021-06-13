@@ -29,7 +29,7 @@ limitations under the License.
 #include "io.h"
 #include "altera_avalon_pio_regs.h"
 #include "altera_avalon_performance_counter.h"
-#include "custom_qml.h"
+#include "QML_accelerator.h"
 
 namespace tflite {
 namespace {
